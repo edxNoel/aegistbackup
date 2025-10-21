@@ -177,6 +177,7 @@ export default function Home() {
         status: 'completed',
         type: 'validation',
         data: validationData,
+        children_ids: [],
         created_at: new Date().toISOString(),
         completed_at: new Date().toISOString()
       };
@@ -205,8 +206,9 @@ export default function Home() {
         label: '🚀 Investigation Started',
         description: `AI agents beginning comprehensive analysis of ${symbol}`,
         status: 'completed',
-        type: 'start',
+        type: 'spawn',
         data: data,
+        children_ids: [],
         created_at: new Date().toISOString(),
         completed_at: new Date().toISOString()
       };
@@ -215,9 +217,19 @@ export default function Home() {
       // Step 3: Run LangChain analysis automatically
       setTimeout(async () => {
         try {
-          const langchainResponse = await fetch(API_ENDPOINTS.langchainDemo(symbol), {
+          console.log('Starting LangChain analysis for:', symbol);
+          const langchainUrl = API_ENDPOINTS.langchainDemo(symbol);
+          console.log('LangChain URL:', langchainUrl);
+          
+          const langchainResponse = await fetch(langchainUrl, {
             method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ symbol }),
           });
+          
+          console.log('LangChain response status:', langchainResponse.status);
           
           if (langchainResponse.ok) {
             const langchainData = await langchainResponse.json();
@@ -238,6 +250,7 @@ export default function Home() {
                   status: 'completed',
                   type: 'analysis',
                   data: analysisData,
+                  children_ids: [],
                   created_at: new Date().toISOString(),
                   completed_at: new Date().toISOString()
                 };
@@ -253,13 +266,14 @@ export default function Home() {
                 label: '🎉 Investigation Complete',
                 description: `Comprehensive AI analysis of ${symbol} finished. Found ${Object.keys(langchainData.langchain_analysis).length} investigation dimensions with LangChain enhancement.`,
                 status: 'completed',
-                type: 'summary',
+                type: 'inference',
                 data: {
                   total_analyses: Object.keys(langchainData.langchain_analysis).length,
                   langchain_enabled: true,
-                  features: langchainData.demo_info.features,
+                  features: langchainData.demo_info?.features || [],
                   timestamp: new Date().toISOString()
                 },
+                children_ids: [],
                 created_at: new Date().toISOString(),
                 completed_at: new Date().toISOString()
               };
@@ -269,7 +283,9 @@ export default function Home() {
             }, analysisTypes.length * 2000 + 1000);
             
           } else {
-            throw new Error('LangChain analysis failed');
+            const errorText = await langchainResponse.text();
+            console.error('LangChain response error:', errorText);
+            throw new Error(`LangChain analysis failed: ${langchainResponse.status} - ${errorText}`);
           }
         } catch (langchainError) {
           console.error('LangChain analysis error:', langchainError);
@@ -280,8 +296,9 @@ export default function Home() {
             label: '⚠️ LangChain Analysis Error',
             description: `LangChain analysis encountered an issue: ${langchainError}`,
             status: 'error',
-            type: 'error',
+            type: 'analysis',
             data: { error: String(langchainError) },
+            children_ids: [],
             created_at: new Date().toISOString()
           };
           
@@ -305,8 +322,9 @@ export default function Home() {
         label: '❌ Investigation Error',
         description: `Failed to investigate ${symbol}: ${error}`,
         status: 'error',
-        type: 'error',
+        type: 'analysis',
         data: { error: String(error) },
+        children_ids: [],
         created_at: new Date().toISOString()
       };
       
