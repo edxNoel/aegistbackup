@@ -321,37 +321,43 @@ const analyzePriceMovement = (symbol: string, analysisData: any, validationData:
   const detailedFactors = [];
   let primaryCause = '';
   let confidence = 0;
+  const causeWeights = []; // Track the strength of each cause
   
-  // News sentiment analysis with detailed reasoning
+  // News sentiment analysis with dynamic reasoning
   if (newsData.confidence_score > 7) {
+    const newsWeight = newsData.confidence_score * (newsData.data_sources || 12) / 10;
+    causeWeights.push({ type: 'news', weight: newsWeight, data: newsData });
+    
     if (direction === 'UP') {
       factors.push('Positive news sentiment driving investor confidence');
       detailedFactors.push(`Recent news coverage has been overwhelmingly positive for ${symbol}, with ${newsData.data_sources || 12} sources highlighting strong fundamentals and growth prospects. This positive sentiment has created a favorable narrative that's attracting both retail and institutional investors, leading to increased buying pressure.`);
-      primaryCause = primaryCause || 'Positive market sentiment from comprehensive news analysis';
     } else {
       factors.push('Negative news sentiment creating selling pressure');
       detailedFactors.push(`Market sentiment has turned bearish for ${symbol} based on analysis of ${newsData.data_sources || 12} news sources. Negative coverage focusing on competitive pressures, regulatory concerns, or operational challenges has spooked investors, triggering a sell-off as traders exit positions to avoid further losses.`);
-      primaryCause = primaryCause || 'Negative market sentiment from news analysis';
     }
     confidence += newsData.confidence_score;
   }
   
-  // Earnings impact analysis with detailed reasoning
+  // Earnings impact analysis with dynamic reasoning
   if (earningsData.confidence_score > 7) {
+    const earningsWeight = earningsData.confidence_score * (earningsData.data_sources || 8) / 8;
+    causeWeights.push({ type: 'earnings', weight: earningsWeight, data: earningsData });
+    
     if (direction === 'UP') {
       factors.push('Earnings outperformance driving institutional buying');
       detailedFactors.push(`${symbol}'s recent earnings performance exceeded Wall Street expectations across multiple metrics, demonstrating strong operational execution and revenue growth. This earnings beat has validated the company's business model and growth trajectory, prompting institutional investors to increase their positions while analysts raise price targets.`);
-      primaryCause = primaryCause || 'Strong earnings outperformance';
     } else {
       factors.push('Earnings disappointment triggering profit-taking');
       detailedFactors.push(`${symbol} failed to meet earnings expectations, revealing underlying business challenges and slowing growth momentum. The earnings miss has raised concerns about the company's competitive position and future profitability, leading investors to reassess their positions and take profits while institutional investors pause their accumulation strategies.`);
-      primaryCause = primaryCause || 'Earnings underperformance concerns';
     }
     confidence += earningsData.confidence_score;
   }
   
-  // Market context analysis with detailed reasoning
+  // Market context analysis with dynamic reasoning
   if (marketData.confidence_score > 6) {
+    const marketWeight = marketData.confidence_score * (marketData.data_sources || 15) / 12;
+    causeWeights.push({ type: 'market', weight: marketWeight, data: marketData });
+    
     if (direction === 'UP') {
       factors.push('Favorable sector trends supporting price appreciation');
       detailedFactors.push(`The broader sector is experiencing a strong tailwind driven by favorable regulatory changes, increased consumer adoption, and technological innovations. ${symbol} is well-positioned to benefit from these macro trends, with institutional investors rotating capital into the sector and driving up valuations across the board.`);
@@ -360,6 +366,49 @@ const analyzePriceMovement = (symbol: string, analysisData: any, validationData:
       detailedFactors.push(`The entire sector is facing significant headwinds including regulatory pressures, supply chain disruptions, or changing consumer preferences. These macro factors are affecting all players in the space, creating a broad-based sell-off as investors move capital to more defensive sectors and await clarity on the outlook.`);
     }
     confidence += marketData.confidence_score;
+  }
+  
+  // DYNAMIC PRIMARY CAUSE DETERMINATION
+  // AI reasons through the data to find the strongest contributing factor
+  if (causeWeights.length > 0) {
+    // Sort by weight to find the dominant cause
+    causeWeights.sort((a, b) => b.weight - a.weight);
+    const dominantCause = causeWeights[0];
+    
+    // Generate dynamic primary cause based on the actual data
+    if (dominantCause.type === 'news') {
+      const newsIndicators = dominantCause.data.sentiment_indicators || [];
+      const keyIndicator = newsIndicators.length > 0 ? newsIndicators[0] : '';
+      if (direction === 'UP') {
+        primaryCause = `Overwhelming positive news sentiment (${dominantCause.data.confidence_score}/10 confidence across ${dominantCause.data.data_sources} sources) with key driver: ${keyIndicator}`;
+      } else {
+        primaryCause = `Broad negative news sentiment (${dominantCause.data.confidence_score}/10 confidence) creating widespread concern among ${dominantCause.data.data_sources} major sources`;
+      }
+    } else if (dominantCause.type === 'earnings') {
+      const earningsIndicators = dominantCause.data.earnings_indicators || [];
+      const keyIndicator = earningsIndicators.length > 0 ? earningsIndicators[0] : '';
+      if (direction === 'UP') {
+        primaryCause = `Strong earnings performance driving institutional confidence - specifically: ${keyIndicator} (confidence: ${dominantCause.data.confidence_score}/10)`;
+      } else {
+        primaryCause = `Earnings disappointment triggering broad reassessment - primary concern: ${keyIndicator} (${dominantCause.data.confidence_score}/10 confidence)`;
+      }
+    } else if (dominantCause.type === 'market') {
+      const sectorTrends = dominantCause.data.sector_trends || [];
+      const keyTrend = sectorTrends.length > 0 ? sectorTrends[0] : '';
+      if (direction === 'UP') {
+        primaryCause = `Favorable sector dynamics leading market rotation - key trend: ${keyTrend} (${dominantCause.data.confidence_score}/10 confidence)`;
+      } else {
+        primaryCause = `Sector-wide pressures driving broad-based selling - primary headwind: ${keyTrend} (${dominantCause.data.confidence_score}/10 confidence)`;
+      }
+    }
+    
+    // If multiple causes are close in weight, acknowledge complexity
+    if (causeWeights.length > 1 && (causeWeights[0].weight - causeWeights[1].weight) < 1) {
+      primaryCause += ` - Note: Multiple strong contributing factors identified (${causeWeights.length} major catalysts)`;
+    }
+  } else {
+    // Fallback for when no strong signals are found
+    primaryCause = `Mixed signals across news, earnings, and market data - price movement likely driven by short-term technical factors or low-volume trading`;
   }
   
   // Calculate overall confidence
