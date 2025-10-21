@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
       root: 'frontend'
     }
   },
-  // Ensure compatibility with Vercel
+  // Production configuration
   trailingSlash: false,
   images: {
     unoptimized: true,
