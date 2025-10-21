@@ -154,6 +154,6 @@ async def websocket_investigation_stream(websocket: WebSocket, investigation_id:
             "timestamp": datetime.now().isoformat()
         }))
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001, reload=False)
+# Export the app for Vercel
+# Vercel will automatically handle ASGI applications
+app_handler = app
