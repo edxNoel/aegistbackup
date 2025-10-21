@@ -135,7 +135,8 @@ export default function Home() {
     investigate: '/api/investigate', 
     websocket: (id: string) => `/ws/investigation/${id}`,
     health: '/api/health',
-    langchainDemo: (symbol: string) => `/api/langchain-demo/${symbol}`
+    langchainDemo: (symbol: string) => `/api/langchain-demo/${symbol}`,
+    langchainTest: '/api/langchain-test'
   };
 
   // Cleanup on component unmount
@@ -218,7 +219,7 @@ export default function Home() {
       setTimeout(async () => {
         try {
           console.log('Starting LangChain analysis for:', symbol);
-          const langchainUrl = API_ENDPOINTS.langchainDemo(symbol);
+          const langchainUrl = API_ENDPOINTS.langchainTest;
           console.log('LangChain URL:', langchainUrl);
           
           const langchainResponse = await fetch(langchainUrl, {
@@ -350,8 +351,12 @@ export default function Home() {
 
   const testLangChain = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.langchainDemo('AAPL'), {
+      const response = await fetch(API_ENDPOINTS.langchainTest, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ symbol: 'AAPL' }),
       });
       const data = await response.json();
       console.log('LangChain test:', data);
