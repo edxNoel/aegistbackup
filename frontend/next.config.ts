@@ -9,8 +9,12 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: [],
+  // Moved server components external packages to the stable option
+  serverExternalPackages: [],
+  server: {
+    turbopack: {
+      root: 'frontend'
+    }
   },
   // Ensure compatibility with Vercel
   trailingSlash: false,
