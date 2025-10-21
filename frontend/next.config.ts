@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: 'standalone',
   distDir: '.next',
+  outputFileTracingRoot: '../',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,11 +12,6 @@ const nextConfig: NextConfig = {
   },
   // Moved server components external packages to the stable option
   serverExternalPackages: [],
-  server: {
-    turbopack: {
-      root: 'frontend'
-    }
-  },
   // Production configuration
   trailingSlash: false,
   images: {
