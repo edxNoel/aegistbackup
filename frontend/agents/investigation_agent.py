@@ -6,9 +6,10 @@ import json
 import os
 from dotenv import load_dotenv
 
-from models.schemas import AgentNode, NodeType, InvestigationUpdate, InvestigationResult
-from services.stock_data_service import StockDataService
-from services.claude_ai_service import ClaudeAIService
+from ..models.schemas import AgentNode, NodeType, InvestigationUpdate, InvestigationResult
+from ..services.stock_data_service import StockDataService
+from ..services.claude_ai_service import ClaudeAIService
+from ..services.langchain_investigation_service import LangChainInvestigationService
 
 load_dotenv()
 
@@ -38,6 +39,7 @@ class InvestigationAgent:
     def __init__(self):
         self.investigations: Dict[str, InvestigationState] = {}
         self.stock_service = StockDataService()
+        self.langchain_service = LangChainInvestigationService()
         
         try:
             self.claude_service = ClaudeAIService()
@@ -162,6 +164,9 @@ class InvestigationAgent:
             # Create market context analysis node
             market_node_id = await self._create_market_context_node(state, parent_node_id)
             
+            # Create comprehensive LangChain analysis (new enhancement)
+            langchain_node_id = await self._create_comprehensive_langchain_analysis(state, parent_node_id)
+            
             # Create technical analysis node
             technical_node_id = await self._create_technical_analysis_node(state, parent_node_id)
             
@@ -169,35 +174,72 @@ class InvestigationAgent:
             print(f"Error spawning sub-investigations: {e}")
 
     async def _create_sentiment_analysis_node(self, state: InvestigationState, parent_node_id: str) -> str:
-        """Create sentiment analysis child node"""
+        """Create sentiment analysis child node with LangChain enhancement"""
         try:
-            # Simulate news sentiment analysis
+            # Use LangChain for enhanced news sentiment analysis
+            langchain_result = await self.langchain_service.investigate_news_sentiment(
+                state.symbol, 
+                state.price_change_percent or 0
+            )
+            
+            # Use Claude for additional analysis if available
             if self.use_claude and self.claude_service:
                 try:
-                    # Use Claude for news sentiment analysis
+                    # Combine LangChain results with Claude analysis
                     news_data = [
                         {"headline": f"{state.symbol} shows strong performance in latest quarter"},
                         {"headline": f"Analysts upgrade {state.symbol} price target"},
                         {"headline": f"{state.symbol} announces new product developments"}
                     ]
-                    sentiment_result = await self.claude_service.analyze_news_sentiment(
+                    claude_result = await self.claude_service.analyze_news_sentiment(
                         state.symbol, news_data, state.price_change_percent or 0
                     )
-                    sentiment_summary = sentiment_result.get("overall_sentiment", "neutral")
-                    impact_score = sentiment_result.get("sentiment_score", 0.5)
+                    
+                    # Combine insights
+                    sentiment_summary = claude_result.get("overall_sentiment", "neutral")
+                    impact_score = claude_result.get("sentiment_score", 0.5)
+                    
+                    # Enhance with LangChain findings
+                    sentiment_indicators = langchain_result.get("sentiment_indicators", [])
+                    key_events = langchain_result.get("key_events", [])
+                    
                 except Exception:
                     sentiment_summary = "mixed"
-                    impact_score = 0.6
+                    impact_score = langchain_result.get("confidence_score", 0.6) / 10
+                    sentiment_indicators = langchain_result.get("sentiment_indicators", [])
+                    key_events = langchain_result.get("key_events", [])
             else:
-                sentiment_summary = "positive" if (state.price_change_percent or 0) > 0 else "negative"
-                impact_score = 0.7
+                # Use LangChain results only
+                sentiment_indicators = langchain_result.get("sentiment_indicators", [])
+                key_events = langchain_result.get("key_events", [])
+                
+                # Determine sentiment from indicators
+                positive_count = sum(1 for ind in sentiment_indicators if "Positive" in ind)
+                negative_count = sum(1 for ind in sentiment_indicators if "Negative" in ind)
+                
+                if positive_count > negative_count:
+                    sentiment_summary = "positive"
+                elif negative_count > positive_count:
+                    sentiment_summary = "negative"
+                else:
+                    sentiment_summary = "neutral"
+                    
+                impact_score = langchain_result.get("confidence_score", 0.6) / 10
             
             node_id = str(uuid.uuid4())
+            
+            # Create enhanced description with LangChain findings
+            description_parts = [f"News sentiment: {sentiment_summary} (impact score: {impact_score:.1f})"]
+            if sentiment_indicators:
+                description_parts.append(f"Key indicators: {', '.join(sentiment_indicators[:3])}")
+            if key_events:
+                description_parts.append(f"Events detected: {', '.join(key_events[:2])}")
+            
             node = AgentNode(
                 id=node_id,
                 type=NodeType.ANALYSIS,
-                label=f"Sentiment Analysis: News Articles",
-                description=f"News sentiment: {sentiment_summary} (impact score: {impact_score:.1f})",
+                label=f"Enhanced Sentiment Analysis: News & Events",
+                description=" | ".join(description_parts),
                 status="completed",
                 data={
                     "sentiment": sentiment_summary,
@@ -217,19 +259,39 @@ class InvestigationAgent:
             return ""
 
     async def _create_earnings_investigation_node(self, state: InvestigationState, parent_node_id: str) -> str:
-        """Create earnings investigation child node"""
+        """Create earnings investigation child node with LangChain enhancement"""
         try:
+            # Use LangChain for enhanced earnings analysis
+            langchain_result = await self.langchain_service.investigate_earnings_impact(
+                state.symbol, 
+                state.price_change_percent or 0
+            )
+            
+            earnings_indicators = langchain_result.get("earnings_indicators", [])
+            analyst_sentiment = langchain_result.get("analyst_sentiment", [])
+            confidence_score = langchain_result.get("confidence_score", 0.0)
+            
+            # Create enhanced description
+            description_parts = [f"Analyzing {state.symbol} earnings impact on price movement"]
+            if earnings_indicators:
+                description_parts.append(f"Indicators: {', '.join(earnings_indicators[:2])}")
+            if analyst_sentiment:
+                description_parts.append(f"Analyst activity: {', '.join(analyst_sentiment[:2])}")
+            
             node_id = str(uuid.uuid4())
             node = AgentNode(
                 id=node_id,
                 type=NodeType.DECISION,
-                label=f"Agent Decision: Investigate Earnings",
-                description=f"Analyzing {state.symbol} earnings impact on price movement",
+                label=f"Enhanced Earnings Investigation",
+                description=" | ".join(description_parts),
                 status="completed",
                 data={
                     "investigation_type": "earnings",
                     "expected_earnings_date": "Next quarter",
-                    "analysis_focus": "EPS and guidance"
+                    "analysis_focus": "EPS and guidance",
+                    "langchain_confidence": confidence_score,
+                    "earnings_indicators": earnings_indicators,
+                    "analyst_sentiment": analyst_sentiment
                 },
                 parent_id=parent_node_id,
                 created_at=datetime.now().isoformat(),
@@ -244,19 +306,39 @@ class InvestigationAgent:
             return ""
 
     async def _create_market_context_node(self, state: InvestigationState, parent_node_id: str) -> str:
-        """Create market context analysis child node"""
+        """Create market context analysis child node with LangChain enhancement"""
         try:
+            # Use LangChain for enhanced market context analysis
+            langchain_result = await self.langchain_service.investigate_market_context(
+                state.symbol, 
+                state.price_change_percent or 0
+            )
+            
+            sector_trends = langchain_result.get("sector_trends", [])
+            peer_performance = langchain_result.get("peer_performance", [])
+            confidence_score = langchain_result.get("confidence_score", 0.0)
+            
+            # Create enhanced description
+            description_parts = [f"Analyzing {state.symbol} performance relative to sector trends"]
+            if sector_trends:
+                description_parts.append(f"Sector insights: {', '.join(sector_trends[:2])}")
+            if peer_performance:
+                description_parts.append(f"Peer analysis: {', '.join(peer_performance[:2])}")
+            
             node_id = str(uuid.uuid4())
             node = AgentNode(
                 id=node_id,
                 type=NodeType.ANALYSIS,
-                label=f"Market Context: Sector Analysis",
-                description=f"Analyzing {state.symbol} performance relative to sector trends",
+                label=f"Enhanced Market Context: Sector & Peer Analysis",
+                description=" | ".join(description_parts),
                 status="completed",
                 data={
                     "sector_performance": "outperforming",
                     "market_correlation": 0.75,
-                    "analysis_type": "market_context"
+                    "analysis_type": "market_context",
+                    "langchain_confidence": confidence_score,
+                    "sector_trends": sector_trends,
+                    "peer_performance": peer_performance
                 },
                 parent_id=parent_node_id,
                 created_at=datetime.now().isoformat(),
@@ -296,6 +378,89 @@ class InvestigationAgent:
             
         except Exception as e:
             print(f"Error creating technical analysis node: {e}")
+            return ""
+
+    async def _create_comprehensive_langchain_analysis(self, state: InvestigationState, parent_node_id: str) -> str:
+        """Create a comprehensive analysis using all LangChain investigation services"""
+        try:
+            node_id = str(uuid.uuid4())
+            
+            # Run all LangChain investigations in parallel
+            news_task = self.langchain_service.investigate_news_sentiment(
+                state.symbol, state.price_change_percent or 0
+            )
+            earnings_task = self.langchain_service.investigate_earnings_impact(
+                state.symbol, state.price_change_percent or 0
+            )
+            market_task = self.langchain_service.investigate_market_context(
+                state.symbol, state.price_change_percent or 0
+            )
+            
+            # Wait for all investigations to complete
+            news_result, earnings_result, market_result = await asyncio.gather(
+                news_task, earnings_task, market_task, return_exceptions=True
+            )
+            
+            # Aggregate results
+            comprehensive_data = {
+                "investigation_type": "comprehensive_langchain",
+                "news_analysis": news_result if not isinstance(news_result, Exception) else {"error": str(news_result)},
+                "earnings_analysis": earnings_result if not isinstance(earnings_result, Exception) else {"error": str(earnings_result)},
+                "market_analysis": market_result if not isinstance(market_result, Exception) else {"error": str(market_result)},
+                "overall_confidence": 0.0,
+                "key_findings": []
+            }
+            
+            # Calculate overall confidence and extract key findings
+            confidences = []
+            key_findings = []
+            
+            if not isinstance(news_result, Exception):
+                confidences.append(news_result.get("confidence_score", 0.0))
+                key_findings.extend(news_result.get("sentiment_indicators", [])[:2])
+                key_findings.extend(news_result.get("key_events", [])[:2])
+            
+            if not isinstance(earnings_result, Exception):
+                confidences.append(earnings_result.get("confidence_score", 0.0))
+                key_findings.extend(earnings_result.get("earnings_indicators", [])[:2])
+                key_findings.extend(earnings_result.get("analyst_sentiment", [])[:2])
+            
+            if not isinstance(market_result, Exception):
+                confidences.append(market_result.get("confidence_score", 0.0))
+                key_findings.extend(market_result.get("sector_trends", [])[:2])
+                key_findings.extend(market_result.get("peer_performance", [])[:2])
+            
+            if confidences:
+                comprehensive_data["overall_confidence"] = sum(confidences) / len(confidences)
+            
+            comprehensive_data["key_findings"] = key_findings[:8]  # Limit to top 8 findings
+            
+            # Create description
+            confidence_pct = comprehensive_data["overall_confidence"] * 10
+            findings_summary = f"{len(key_findings)} key insights identified"
+            
+            node = AgentNode(
+                id=node_id,
+                type=NodeType.ANALYSIS,
+                label=f"LangChain Comprehensive Investigation",
+                description=f"Multi-dimensional analysis complete | Confidence: {confidence_pct:.1f}% | {findings_summary}",
+                status="completed",
+                data=comprehensive_data,
+                parent_id=parent_node_id,
+                created_at=datetime.now().isoformat(),
+                completed_at=datetime.now().isoformat()
+            )
+            
+            state.nodes.append(node)
+            state.investigation_branches.append("langchain_comprehensive")
+            
+            # Add findings to state
+            state.current_findings.extend([f"LangChain: {finding}" for finding in key_findings[:5]])
+            
+            return node_id
+            
+        except Exception as e:
+            print(f"Error creating comprehensive LangChain analysis: {e}")
             return ""
 
     async def _cross_validate_findings(self, state: InvestigationState):

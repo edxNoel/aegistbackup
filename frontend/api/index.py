@@ -9,9 +9,9 @@ from datetime import datetime
 import yfinance as yf
 
 # Import our LangGraph agent
-from backend.agents.investigation_agent import InvestigationAgent
-from backend.models.schemas import StockInvestigationRequest, InvestigationResponse, AgentNode
-from backend.services.stock_data_service import StockDataService
+from ..agents.investigation_agent import InvestigationAgent
+from ..models.schemas import StockInvestigationRequest, InvestigationResponse, AgentNode
+from ..services.stock_data_service import StockDataService
 
 app = FastAPI(title="Agentic AI Stock Investigation System", version="1.0.0")
 
@@ -124,6 +124,66 @@ async def start_investigation(request: StockInvestigationRequest):
 @app.get("/api/investigation/{investigation_id}")
 async def get_investigation_status(investigation_id: str):
     """Get the current status and results of an investigation"""
+    try:
+        # Use the global agent instance
+        status = await agent.get_investigation_status(investigation_id)
+        return status
+    except Exception as e:
+        print(f"Error getting investigation status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/langchain-demo/{symbol}")
+async def langchain_investigation_demo(symbol: str):
+    """Demonstrate LangChain investigation capabilities"""
+    try:
+        print(f"Running LangChain demo for {symbol}")
+        
+        # Get the LangChain service from the agent
+        langchain_service = agent.langchain_service
+        
+        # Run all three LangChain investigations
+        tasks = [
+            langchain_service.investigate_news_sentiment(symbol, 5.0),
+            langchain_service.investigate_earnings_impact(symbol, 5.0),
+            langchain_service.investigate_market_context(symbol, 5.0)
+        ]
+        
+        news_result, earnings_result, market_result = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
+        
+        # Prepare demo response
+        demo_response = {
+            "symbol": symbol.upper(),
+            "langchain_analysis": {
+                "news_sentiment": news_result if not isinstance(news_result, Exception) else {"error": str(news_result)},
+                "earnings_impact": earnings_result if not isinstance(earnings_result, Exception) else {"error": str(earnings_result)},
+                "market_context": market_result if not isinstance(market_result, Exception) else {"error": str(market_result)}
+            },
+            "demo_info": {
+                "description": "LangChain-powered investigation using DuckDuckGo search and AI analysis",
+                "features": [
+                    "Real-time web search for news and analysis",
+                    "Sentiment indicator extraction",
+                    "Earnings event detection",
+                    "Sector trend analysis",
+                    "Peer comparison insights"
+                ],
+                "confidence_scoring": "Each analysis includes confidence scores (0-10 scale)",
+                "search_integration": "Uses DuckDuckGo API for external data gathering"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        return demo_response
+        
+    except Exception as e:
+        print(f"Error in LangChain demo: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/investigation/{investigation_id}")
+async def get_investigation_status_endpoint(investigation_id: str):
+    """Get the current status and results of an investigation (renamed to avoid duplicate)"""
     try:
         # Use the global agent instance
         status = await agent.get_investigation_status(investigation_id)
