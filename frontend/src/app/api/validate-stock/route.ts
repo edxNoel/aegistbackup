@@ -15,12 +15,14 @@ export async function POST(request: NextRequest) {
     const symbolUpper = symbol.toUpperCase();
     
     // Demo stock validation response
+    const changePercent = (Math.random() - 0.5) * 10; // Random change between -5 to +5
     const validationData = {
       symbol: symbolUpper,
       valid: true,
       current_price: Math.random() * 200 + 50, // Random price between 50-250
-      change: (Math.random() - 0.5) * 10, // Random change between -5 to +5
-      change_percent: `${((Math.random() - 0.5) * 10).toFixed(2)}%`,
+      change: changePercent,
+      change_percent: changePercent, // Return as number, not string with %
+      change_percent_display: `${changePercent.toFixed(2)}%`, // Display version with %
       volume: Math.floor(Math.random() * 10000000) + 1000000, // Random volume
       market_cap: Math.floor(Math.random() * 1000000000000) + 100000000000, // Random market cap
       company_name: `${symbolUpper} Corporation`,
