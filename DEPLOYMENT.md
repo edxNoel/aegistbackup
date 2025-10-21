@@ -19,12 +19,12 @@ git push origin main
 1. Go to [vercel.com](https://vercel.com) and sign in
 2. Click "New Project"
 3. Import your GitHub repository
-4. Vercel will auto-detect it as a Next.js project
-5. **Important**: Set these configurations:
+4. **IMPORTANT - Configure for monorepo**:
    - **Framework Preset**: Next.js
-   - **Root Directory**: `./` (leave as default)
-   - **Build Command**: `npm run vercel-build`
-   - **Output Directory**: `frontend/.next`
+   - **Root Directory**: `frontend` (NOT the default `./`)
+   - **Build Command**: `npm run build` (use default)
+   - **Output Directory**: `.next` (use default)
+   - **Install Command**: `npm install` (use default)
 
 ### 3. **Environment Variables**
 In your Vercel project dashboard:
@@ -42,22 +42,23 @@ In your Vercel project dashboard:
 
 ## Configuration Details
 
-### **File Structure for Vercel**
+### **Monorepo Structure**
 ```
-├── vercel.json          # Deployment configuration
-├── package.json         # Root build scripts
-├── frontend/            # Next.js app
-│   ├── package.json
-│   └── next.config.ts   # Production optimizations
-└── backend/             # FastAPI backend
+├── package.json         # Root build scripts (for local development)
+├── frontend/            # Next.js app (THIS IS THE ROOT DIRECTORY FOR VERCEL)
+│   ├── package.json     # Frontend dependencies
+│   ├── next.config.ts   # Next.js configuration
+│   └── src/             # Source code
+└── backend/             # FastAPI backend (separate deployment needed)
     ├── main.py          # API routes
     └── requirements.txt
 ```
 
-### **API Routing**
-- Frontend: `https://your-app.vercel.app`
-- Backend API: `https://your-app.vercel.app/api/*`
-- WebSocket: `wss://your-app.vercel.app/ws/*`
+### **Important Notes for Monorepo**
+- **Set Root Directory to `frontend`** in Vercel settings
+- This deploys ONLY the frontend to Vercel
+- Backend needs separate deployment (Railway, Render, etc.)
+- Update API endpoints in `frontend/src/lib/api.ts` to point to backend URL
 
 ## Important Notes
 
