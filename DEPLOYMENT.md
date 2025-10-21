@@ -3,7 +3,7 @@
 ## Prerequisites
 1. **GitHub Repository**: Push your code to GitHub
 2. **Vercel Account**: Sign up at [vercel.com](https://vercel.com)
-3. **OpenAI API Key**: Get one from [OpenAI](https://platform.openai.com/api-keys)
+3. **Anthropic API Key**: Get one from [Anthropic Console](https://console.anthropic.com/)
 
 ## Step-by-Step Deployment
 
@@ -31,7 +31,7 @@ In your Vercel project dashboard:
 1. Go to **Settings** → **Environment Variables**
 2. Add these variables:
    ```
-   OPENAI_API_KEY = your_actual_openai_api_key
+   ANTHROPIC_API_KEY = your_actual_anthropic_api_key
    PYTHON_VERSION = 3.11
    ```
 
@@ -70,7 +70,7 @@ In your Vercel project dashboard:
 
 ## Important Notes
 
-1. **Environment Variables**: Make sure to add your OpenAI API key in Vercel settings
+1. **Environment Variables**: Make sure to add your Anthropic API key in Vercel settings
 2. **WebSocket Limitations**: Vercel has a 10-second timeout for WebSocket connections
 3. **Cold Starts**: First request might be slower due to serverless cold starts
 4. **Function Timeout**: Set to 30 seconds in vercel.json for AI processing

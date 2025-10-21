@@ -37,7 +37,6 @@ class InvestigationState:
 class InvestigationAgent:
     def __init__(self):
         self.investigations: Dict[str, InvestigationState] = {}
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.stock_service = StockDataService()
         
         try:
