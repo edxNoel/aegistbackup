@@ -19,12 +19,12 @@ git push origin main
 1. Go to [vercel.com](https://vercel.com) and sign in
 2. Click "New Project"
 3. Import your GitHub repository
-4. **IMPORTANT - Configure for monorepo**:
+4. **Configure deployment settings**:
    - **Framework Preset**: Next.js
-   - **Root Directory**: `frontend` (NOT the default `./`)
-   - **Build Command**: `npm run build` (use default)
-   - **Output Directory**: `.next` (use default)
-   - **Install Command**: `npm install` (use default)
+   - **Root Directory**: `./` (use default for monorepo setup)
+   - **Build Command**: `npm run vercel-build`
+   - **Output Directory**: `frontend/.next`
+   - **Install Command**: `npm install --prefix frontend`
 
 ### 3. **Environment Variables**
 In your Vercel project dashboard:
@@ -42,23 +42,31 @@ In your Vercel project dashboard:
 
 ## Configuration Details
 
-### **Monorepo Structure**
+### **Full-Stack Vercel Deployment**
 ```
-├── package.json         # Root build scripts (for local development)
-├── frontend/            # Next.js app (THIS IS THE ROOT DIRECTORY FOR VERCEL)
+├── vercel.json          # Deployment configuration with routing
+├── package.json         # Root build scripts
+├── api/                 # Python backend API (Vercel serverless functions)
+│   ├── index.py         # Entry point for Vercel
+│   └── requirements.txt # Python dependencies
+├── frontend/            # Next.js app
 │   ├── package.json     # Frontend dependencies
-│   ├── next.config.ts   # Next.js configuration
 │   └── src/             # Source code
-└── backend/             # FastAPI backend (separate deployment needed)
-    ├── main.py          # API routes
+└── backend/             # Original backend code (imported by api/)
+    ├── main.py          # FastAPI application
     └── requirements.txt
 ```
 
-### **Important Notes for Monorepo**
-- **Set Root Directory to `frontend`** in Vercel settings
-- This deploys ONLY the frontend to Vercel
-- Backend needs separate deployment (Railway, Render, etc.)
-- Update API endpoints in `frontend/src/lib/api.ts` to point to backend URL
+### **API Routing (Same Domain)**
+- Frontend: `https://your-app.vercel.app`
+- Backend API: `https://your-app.vercel.app/api/*`
+- WebSocket: `wss://your-app.vercel.app/ws/*`
+
+### **Benefits of This Setup**
+- ✅ **No CORS issues** - Same domain for frontend and backend
+- ✅ **Simplified deployment** - One Vercel project for everything
+- ✅ **Automatic HTTPS** - Vercel handles SSL certificates
+- ✅ **Environment variables** - Centralized in Vercel dashboard
 
 ## Important Notes
 

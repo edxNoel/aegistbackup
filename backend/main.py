@@ -22,7 +22,11 @@ stock_service = StockDataService()
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js frontend on standard port
+    allow_origins=[
+        "http://localhost:3000",  # Next.js frontend for local development
+        "https://*.vercel.app",   # Vercel deployment domains
+        "*"  # Allow all origins for Vercel serverless functions
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],

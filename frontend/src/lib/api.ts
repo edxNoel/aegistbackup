@@ -1,11 +1,11 @@
 // API configuration for different environments
 export const API_CONFIG = {
   baseURL: process.env.NODE_ENV === 'production' 
-    ? process.env.NEXT_PUBLIC_API_URL || '' // Use environment variable for production backend URL
+    ? '' // In production, API routes will be at the same domain via Vercel routing
     : 'http://localhost:8000',
   
   wsURL: process.env.NODE_ENV === 'production'
-    ? process.env.NEXT_PUBLIC_WS_URL || `wss://${typeof window !== 'undefined' ? window.location.host : ''}`
+    ? `wss://${typeof window !== 'undefined' ? window.location.host : ''}`
     : 'ws://localhost:8000'
 };
 
