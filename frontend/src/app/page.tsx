@@ -155,35 +155,7 @@ export default function Home() {
     setNodes([]);
     
     try {
-      // First, try the LangChain demo endpoint to test functionality
-      try {
-        const langchainResponse = await fetch(API_ENDPOINTS.langchainDemo(symbol), {
-          method: 'POST',
-        });
-        
-        if (langchainResponse.ok) {
-          const langchainData = await langchainResponse.json();
-          console.log('LangChain demo successful:', langchainData);
-          
-          // Add LangChain results as nodes
-          const langchainNode: AgentNode = {
-            id: 'langchain-demo',
-            label: '🔗 LangChain Analysis Complete',
-            description: `Analyzed ${symbol} with ${Object.keys(langchainData.langchain_analysis).length} investigation types`,
-            status: 'completed',
-            type: 'analysis',
-            data: langchainData.langchain_analysis,
-            created_at: new Date().toISOString(),
-            completed_at: new Date().toISOString()
-          };
-          
-          setNodes([langchainNode]);
-        }
-      } catch (error) {
-        console.log('LangChain demo not available, trying main investigation');
-      }
-
-      // Validate stock first
+      // Step 1: Validate stock first
       const validateResponse = await fetch(API_ENDPOINTS.validateStock, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -191,14 +163,26 @@ export default function Home() {
       });
 
       if (!validateResponse.ok) {
-        const errorData = await validateResponse.text();
-        throw new Error(`Stock validation failed: ${errorData}`);
+        throw new Error(`Stock validation failed`);
       }
 
       const validationData = await validateResponse.json();
       console.log('Stock validated:', validationData);
 
-      // Start investigation with date range
+      // Add validation node
+      const validationNode: AgentNode = {
+        id: 'validation',
+        label: '✅ Stock Validation Complete',
+        description: `${symbol} validated - Price: $${validationData.current_price?.toFixed(2)}, Change: ${validationData.change_percent}`,
+        status: 'completed',
+        type: 'validation',
+        data: validationData,
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      };
+      setNodes([validationNode]);
+
+      // Step 2: Start main investigation
       const response = await fetch(API_ENDPOINTS.investigate, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,46 +199,101 @@ export default function Home() {
       const data = await response.json();
       setInvestigationData(data);
 
-      // Try WebSocket connection for real-time updates
-      try {
-        const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${API_ENDPOINTS.websocket(data.investigation_id)}`;
-        const ws = new WebSocket(wsUrl);
-        setCurrentWebSocket(ws);
-        
-        ws.onmessage = (event) => {
-          const update = JSON.parse(event.data);
-          console.log('Received update:', update);
+      // Add investigation start node
+      const startNode: AgentNode = {
+        id: 'investigation-start',
+        label: '🚀 Investigation Started',
+        description: `AI agents beginning comprehensive analysis of ${symbol}`,
+        status: 'completed',
+        type: 'start',
+        data: data,
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      };
+      setNodes(prev => [...prev, startNode]);
 
-          if (update.type === 'node_update' || update.type === 'node_completed') {
-            setNodes(prev => [...prev, update.node]);
-          } else if (update.type === 'investigation_complete') {
-            console.log('Investigation completed');
-            setIsLoading(false);
-            ws.close();
+      // Step 3: Run LangChain analysis automatically
+      setTimeout(async () => {
+        try {
+          const langchainResponse = await fetch(API_ENDPOINTS.langchainDemo(symbol), {
+            method: 'POST',
+          });
+          
+          if (langchainResponse.ok) {
+            const langchainData = await langchainResponse.json();
+            console.log('LangChain analysis complete:', langchainData);
+            
+            // Add individual analysis nodes
+            const analysisTypes = ['news_sentiment', 'earnings_impact', 'market_context'];
+            
+            for (let i = 0; i < analysisTypes.length; i++) {
+              const analysisType = analysisTypes[i];
+              const analysisData = langchainData.langchain_analysis[analysisType];
+              
+              setTimeout(() => {
+                const analysisNode: AgentNode = {
+                  id: `langchain-${analysisType}`,
+                  label: `🔗 ${analysisType.replace('_', ' ').toUpperCase()} Analysis`,
+                  description: `${analysisData?.sentiment_indicators?.length || analysisData?.earnings_indicators?.length || analysisData?.sector_trends?.length || 0} insights found - Confidence: ${analysisData?.confidence_score}/10`,
+                  status: 'completed',
+                  type: 'analysis',
+                  data: analysisData,
+                  created_at: new Date().toISOString(),
+                  completed_at: new Date().toISOString()
+                };
+                
+                setNodes(prev => [...prev, analysisNode]);
+              }, i * 2000); // Stagger the results by 2 seconds each
+            }
+            
+            // Add final summary node
+            setTimeout(() => {
+              const summaryNode: AgentNode = {
+                id: 'investigation-complete',
+                label: '🎉 Investigation Complete',
+                description: `Comprehensive AI analysis of ${symbol} finished. Found ${Object.keys(langchainData.langchain_analysis).length} investigation dimensions with LangChain enhancement.`,
+                status: 'completed',
+                type: 'summary',
+                data: {
+                  total_analyses: Object.keys(langchainData.langchain_analysis).length,
+                  langchain_enabled: true,
+                  features: langchainData.demo_info.features,
+                  timestamp: new Date().toISOString()
+                },
+                created_at: new Date().toISOString(),
+                completed_at: new Date().toISOString()
+              };
+              
+              setNodes(prev => [...prev, summaryNode]);
+              setIsLoading(false);
+            }, analysisTypes.length * 2000 + 1000);
+            
+          } else {
+            throw new Error('LangChain analysis failed');
           }
-        };
-
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-        };
-
-        ws.onclose = () => {
-          console.log('WebSocket connection closed');
+        } catch (langchainError) {
+          console.error('LangChain analysis error:', langchainError);
+          
+          // Add error node but continue
+          const errorNode: AgentNode = {
+            id: 'langchain-error',
+            label: '⚠️ LangChain Analysis Error',
+            description: `LangChain analysis encountered an issue: ${langchainError}`,
+            status: 'error',
+            type: 'error',
+            data: { error: String(langchainError) },
+            created_at: new Date().toISOString()
+          };
+          
+          setNodes(prev => [...prev, errorNode]);
           setIsLoading(false);
-          setCurrentWebSocket(null);
-        };
-      } catch (wsError) {
-        console.log('WebSocket not available, investigation will run without real-time updates');
-        setIsLoading(false);
-      }
+        }
+      }, 1000); // Start LangChain analysis after 1 second
 
-      // Set timeout to stop loading after 2 minutes
+      // Set timeout to stop loading after 30 seconds max
       timeoutRef.current = setTimeout(() => {
         setIsLoading(false);
-        if (currentWebSocket) {
-          currentWebSocket.close();
-        }
-      }, 120000);
+      }, 30000);
 
     } catch (error) {
       console.error('Investigation failed:', error);
