@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     
     console.log('LangChain test endpoint called with symbol:', symbol);
     
-    // Simple demo response
+    // Simple demo response with enhanced data for price analysis
     const demoResponse = {
       success: true,
       symbol,
@@ -16,30 +16,36 @@ export async function POST(request: NextRequest) {
           sentiment_indicators: [
             `${symbol} shows positive sentiment in recent news coverage`,
             `Market analysts maintain optimistic outlook for ${symbol}`,
-            `Recent product launches driving positive investor sentiment`
+            `Recent product launches driving positive investor sentiment`,
+            `Social media sentiment trending upward for ${symbol}`
           ],
           confidence_score: 8,
           data_sources: 12,
+          search_query: `${symbol} stock news recent price movement sentiment`,
           last_updated: new Date().toISOString()
         },
         earnings_impact: {
           earnings_indicators: [
             `${symbol} earnings exceeded expectations in Q4`,
             `Revenue growth accelerating for ${symbol}`,
-            `Profit margins improving across key business segments`
+            `Profit margins improving across key business segments`,
+            `Forward guidance raised for upcoming quarters`
           ],
           confidence_score: 9,
           data_sources: 8,
+          search_query: `${symbol} earnings report quarterly results analyst estimates`,
           last_updated: new Date().toISOString()
         },
         market_context: {
           sector_trends: [
             `${symbol} sector showing strong fundamentals`,
             `Market rotation favoring ${symbol} industry`,
-            `Institutional buying pressure increasing`
+            `Institutional buying pressure increasing`,
+            `Technical indicators suggest continued momentum`
           ],
           confidence_score: 7,
           data_sources: 15,
+          search_query: `${symbol} sector performance market trends peer comparison`,
           last_updated: new Date().toISOString()
         }
       },

@@ -122,15 +122,17 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
           </div>
         ) : (
           <div className="relative min-h-full">
-            {/* Horizontal node flow */}
+            {/* Horizontal node flow with enhanced sub-node visualization */}
             <div className="flex items-start space-x-6 overflow-x-auto pb-4 min-w-max">
               {nodes.map((node: AgentNode, index: number) => (
                 <div key={node.id || index} className="flex items-center">
-                  {/* Node */}
+                  {/* Node with enhanced styling for different types */}
                   <div className={`
                     ${getNodeColor(node.type, node.status)} 
                     rounded-lg p-4 min-w-64 max-w-80 text-white shadow-lg border-2
                     transition-all duration-300 hover:scale-105
+                    ${node.type === 'spawn' ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}
+                    ${node.type === 'inference' ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}
                   `}>
                     {/* Node Header */}
                     <div className="flex items-center justify-between mb-3">
@@ -162,6 +164,16 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                       {node.description}
                     </p>
                     
+                    {/* Enhanced data display for inference nodes */}
+                    {node.type === 'inference' && (node.data as any)?.primary_cause && (
+                      <div className="bg-black bg-opacity-30 rounded p-2 mb-3 text-xs">
+                        <div className="font-semibold text-yellow-300">Price Analysis:</div>
+                        <div>Direction: <span className={(node.data as any).direction === 'UP' ? 'text-green-300' : 'text-red-300'}>{(node.data as any).direction}</span></div>
+                        <div>Cause: {(node.data as any).primary_cause}</div>
+                        <div>Confidence: {(node.data as any).confidence}/10</div>
+                      </div>
+                    )}
+                    
                     {/* Node Footer */}
                     <div className="flex justify-between items-center text-xs opacity-75">
                       <span>
@@ -190,11 +202,29 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                     )}
                   </div>
                   
-                  {/* Arrow connector */}
+                  {/* Enhanced arrow connector with different styles for different relationships */}
                   {index < nodes.length - 1 && (
                     <div className="flex items-center mx-3">
-                      <div className="w-12 h-0.5 bg-gray-500"></div>
-                      <div className="w-0 h-0 border-l-6 border-l-gray-500 border-y-4 border-y-transparent"></div>
+                      {/* Different arrow styles based on node relationship */}
+                      {node.type === 'spawn' ? (
+                        // Spawn to sub-node arrow (dotted)
+                        <div className="flex items-center">
+                          <div className="w-12 h-0.5 bg-yellow-500 opacity-60" style={{backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 2px, #eab308 2px, #eab308 4px)'}}></div>
+                          <div className="w-0 h-0 border-l-6 border-l-yellow-500 border-y-4 border-y-transparent opacity-60"></div>
+                        </div>
+                      ) : node.type === 'inference' ? (
+                        // Inference arrow (thicker, purple)
+                        <div className="flex items-center">
+                          <div className="w-12 h-1 bg-purple-500"></div>
+                          <div className="w-0 h-0 border-l-8 border-l-purple-500 border-y-6 border-y-transparent"></div>
+                        </div>
+                      ) : (
+                        // Regular flow arrow
+                        <div className="flex items-center">
+                          <div className="w-12 h-0.5 bg-gray-500"></div>
+                          <div className="w-0 h-0 border-l-6 border-l-gray-500 border-y-4 border-y-transparent"></div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -207,7 +237,7 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white font-semibold">Investigation Progress</span>
                   <span className="text-gray-300 text-sm">
-                    {nodes.filter(n => n.status === 'completed').length} / {nodes.length} completed
+                    {nodes.filter((n: AgentNode) => n.status === 'completed').length} / {nodes.length} completed
                   </span>
                 </div>
                 
@@ -215,16 +245,16 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                   <div 
                     className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
                     style={{ 
-                      width: `${nodes.length > 0 ? (nodes.filter(n => n.status === 'completed').length / nodes.length) * 100 : 0}%` 
+                      width: `${nodes.length > 0 ? (nodes.filter((n: AgentNode) => n.status === 'completed').length / nodes.length) * 100 : 0}%` 
                     }}
                   ></div>
                 </div>
                 
                 {/* Node Type Summary */}
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {Array.from(new Set(nodes.map(n => n.type))).map(type => {
-                    const typeNodes = nodes.filter(n => n.type === type);
-                    const completed = typeNodes.filter(n => n.status === 'completed').length;
+                  {Array.from(new Set(nodes.map((n: AgentNode) => n.type))).map((type: string) => {
+                    const typeNodes = nodes.filter((n: AgentNode) => n.type === type);
+                    const completed = typeNodes.filter((n: AgentNode) => n.status === 'completed').length;
                     return (
                       <div key={type} className="bg-gray-600 rounded px-2 py-1 text-xs">
                         <span className="font-semibold">{type.replace('_', ' ').toUpperCase()}: </span>
@@ -240,6 +270,85 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
       </div>
     </div>
   );
+};
+
+// Dynamic price movement analysis function
+const analyzePriceMovement = (symbol: string, analysisData: any, validationData: any) => {
+  // Extract key indicators from analysis data
+  const newsData = analysisData.news_sentiment || {};
+  const earningsData = analysisData.earnings_impact || {};
+  const marketData = analysisData.market_context || {};
+  
+  // Simulate price direction (in real implementation, this would come from actual price data)
+  const priceChange = validationData?.change_percent || (Math.random() - 0.5) * 10;
+  const direction = priceChange > 0 ? 'UP' : 'DOWN';
+  const magnitude = Math.abs(priceChange);
+  
+  // Analyze contributing factors
+  const factors = [];
+  let primaryCause = '';
+  let confidence = 0;
+  
+  // News sentiment analysis
+  if (newsData.confidence_score > 7) {
+    if (direction === 'UP') {
+      factors.push('Positive news sentiment driving investor confidence');
+      primaryCause = primaryCause || 'Strong positive news coverage';
+    } else {
+      factors.push('Negative news sentiment creating selling pressure');
+      primaryCause = primaryCause || 'Negative market sentiment from news';
+    }
+    confidence += newsData.confidence_score;
+  }
+  
+  // Earnings impact analysis
+  if (earningsData.confidence_score > 7) {
+    if (direction === 'UP') {
+      factors.push('Earnings beat expectations, driving institutional buying');
+      primaryCause = primaryCause || 'Earnings outperformance';
+    } else {
+      factors.push('Earnings disappointment leading to profit-taking');
+      primaryCause = primaryCause || 'Earnings underperformance';
+    }
+    confidence += earningsData.confidence_score;
+  }
+  
+  // Market context analysis
+  if (marketData.confidence_score > 6) {
+    if (direction === 'UP') {
+      factors.push('Favorable sector trends supporting price appreciation');
+    } else {
+      factors.push('Sector headwinds contributing to price decline');
+    }
+    confidence += marketData.confidence_score;
+  }
+  
+  // Calculate overall confidence
+  const avgConfidence = confidence / 3;
+  
+  // Generate recommendation
+  let recommendation = '';
+  if (avgConfidence > 8 && magnitude > 3) {
+    recommendation = direction === 'UP' ? 'Strong momentum likely to continue' : 'Consider defensive positioning';
+  } else if (avgConfidence > 6) {
+    recommendation = direction === 'UP' ? 'Moderate upside potential' : 'Monitor for reversal signals';
+  } else {
+    recommendation = 'Mixed signals - await further confirmation';
+  }
+  
+  // Create summary
+  const summary = `${symbol} moved ${direction} ${magnitude.toFixed(2)}% - Primary cause: ${primaryCause}. ${factors.length} contributing factors identified.`;
+  
+  return {
+    summary,
+    direction,
+    primaryCause: primaryCause || 'Multiple factors',
+    confidence: Math.round(avgConfidence),
+    evidence: factors,
+    sentiment: direction === 'UP' ? 'Bullish' : 'Bearish',
+    recommendation,
+    magnitude: magnitude.toFixed(2)
+  };
 };
 
 export default function Home() {
@@ -335,7 +444,7 @@ export default function Home() {
       };
       setNodes(prev => [...prev, startNode]);
 
-      // Step 3: Run LangChain analysis automatically
+      // Step 3: Run LangChain analysis automatically with sub-nodes
       setTimeout(async () => {
         try {
           console.log('Starting LangChain analysis for:', symbol);
@@ -356,42 +465,90 @@ export default function Home() {
             const langchainData = await langchainResponse.json();
             console.log('LangChain analysis complete:', langchainData);
             
-            // Add individual analysis nodes
+            // Main analysis types with sub-nodes
             const analysisTypes = ['news_sentiment', 'earnings_impact', 'market_context'];
+            let allAnalysisData: any = {};
             
             for (let i = 0; i < analysisTypes.length; i++) {
               const analysisType = analysisTypes[i];
               const analysisData = langchainData.langchain_analysis[analysisType];
+              allAnalysisData[analysisType] = analysisData;
               
               setTimeout(() => {
-                const analysisNode: AgentNode = {
+                // Main analysis node
+                const mainAnalysisNode: AgentNode = {
                   id: `langchain-${analysisType}`,
-                  label: `Fetch ${analysisType.replace('_', ' ').toUpperCase()} Data`,
-                  description: `Analyzing ${symbol} through ${analysisData?.sentiment_indicators?.length || analysisData?.earnings_indicators?.length || analysisData?.sector_trends?.length || 0} data sources - Confidence Score: ${analysisData?.confidence_score}/10`,
+                  label: `Agent Decision: Investigate ${analysisType.replace('_', ' ').toUpperCase()}`,
+                  description: `Spawning sub-investigation for ${analysisType.replace('_', ' ')} analysis of ${symbol}`,
                   status: 'completed',
-                  type: 'analysis',
-                  data: analysisData,
+                  type: 'spawn',
+                  data: { analysis_type: analysisType },
                   children_ids: [],
                   created_at: new Date().toISOString(),
                   completed_at: new Date().toISOString()
                 };
                 
-                setNodes(prev => [...prev, analysisNode]);
-              }, i * 2000); // Stagger the results by 2 seconds each
+                setNodes(prev => [...prev, mainAnalysisNode]);
+                
+                // Sub-node 1: Data Fetch
+                setTimeout(() => {
+                  const fetchNode: AgentNode = {
+                    id: `fetch-${analysisType}`,
+                    label: `Fetch ${analysisType.replace('_', ' ').toUpperCase()} Data`,
+                    description: `Retrieved ${analysisData?.data_sources || 0} data sources for ${analysisType.replace('_', ' ')} analysis`,
+                    status: 'completed',
+                    type: 'data_fetch',
+                    data: { 
+                      sources_count: analysisData?.data_sources || 0,
+                      search_query: analysisData?.search_query 
+                    },
+                    children_ids: [],
+                    created_at: new Date().toISOString(),
+                    completed_at: new Date().toISOString()
+                  };
+                  
+                  setNodes(prev => [...prev, fetchNode]);
+                }, 500);
+                
+                // Sub-node 2: Analysis
+                setTimeout(() => {
+                  const processNode: AgentNode = {
+                    id: `process-${analysisType}`,
+                    label: `${analysisType.replace('_', ' ').toUpperCase()} Analysis: Processing Data`,
+                    description: `Analyzed ${analysisData?.sentiment_indicators?.length || analysisData?.earnings_indicators?.length || analysisData?.sector_trends?.length || 0} key indicators with ${analysisData?.confidence_score}/10 confidence`,
+                    status: 'completed',
+                    type: 'analysis',
+                    data: analysisData,
+                    children_ids: [],
+                    created_at: new Date().toISOString(),
+                    completed_at: new Date().toISOString()
+                  };
+                  
+                  setNodes(prev => [...prev, processNode]);
+                }, 1000);
+                
+              }, i * 3000); // Stagger main nodes by 3 seconds to allow for sub-nodes
             }
             
-            // Add final summary node
+            // Final inference node that analyzes WHY price moved
             setTimeout(() => {
-              const summaryNode: AgentNode = {
-                id: 'investigation-complete',
-                label: 'Inference Node: Cross-Reference Analysis Complete',
-                description: `AI agent synthesized ${Object.keys(langchainData.langchain_analysis).length} investigation streams into comprehensive market intelligence for ${symbol}`,
+              // Dynamically analyze price movement based on collected data
+              const priceAnalysis = analyzePriceMovement(symbol, allAnalysisData, validationData);
+              
+              const finalInferenceNode: AgentNode = {
+                id: 'price-movement-inference',
+                label: 'Inference Node: Price Movement Analysis',
+                description: priceAnalysis.summary,
                 status: 'completed',
                 type: 'inference',
                 data: {
-                  total_analyses: Object.keys(langchainData.langchain_analysis).length,
-                  langchain_enabled: true,
-                  features: langchainData.demo_info?.features || [],
+                  price_direction: priceAnalysis.direction,
+                  primary_cause: priceAnalysis.primaryCause,
+                  confidence_score: priceAnalysis.confidence,
+                  supporting_evidence: priceAnalysis.evidence,
+                  market_sentiment: priceAnalysis.sentiment,
+                  recommendation: priceAnalysis.recommendation,
+                  cross_validated_data: Object.keys(allAnalysisData),
                   timestamp: new Date().toISOString()
                 },
                 children_ids: [],
@@ -399,9 +556,9 @@ export default function Home() {
                 completed_at: new Date().toISOString()
               };
               
-              setNodes(prev => [...prev, summaryNode]);
+              setNodes(prev => [...prev, finalInferenceNode]);
               setIsLoading(false);
-            }, analysisTypes.length * 2000 + 1000);
+            }, (analysisTypes.length * 3000) + 2000);
             
           } else {
             const errorText = await langchainResponse.text();
