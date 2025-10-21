@@ -16,7 +16,7 @@ const InvestigationForm = ({ onInvestigationStart, onReset, isLoading }: any) =>
 
   return (
     <div className="bg-gray-800 rounded-lg p-6">
-      <h2 className="text-white text-xl font-semibold mb-4">🔍 Stock Investigation</h2>
+      <h2 className="text-white text-xl font-semibold mb-4">Stock Investigation</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
@@ -61,7 +61,7 @@ const InvestigationForm = ({ onInvestigationStart, onReset, isLoading }: any) =>
             disabled={isLoading}
             className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white py-2 px-4 rounded transition-colors"
           >
-            {isLoading ? '🔄 Investigating...' : '🚀 Start Investigation'}
+            {isLoading ? 'Investigating...' : 'Start Investigation'}
           </button>
           <button
             type="button"
@@ -77,9 +77,36 @@ const InvestigationForm = ({ onInvestigationStart, onReset, isLoading }: any) =>
 };
 
 const NodeVisualization = ({ nodes, isLoading }: any) => {
+  const getNodeColor = (type: string, status: string) => {
+    if (status === 'error') return 'bg-red-600 border-red-400';
+    if (status === 'in_progress') return 'bg-yellow-600 border-yellow-400 animate-pulse';
+    
+    switch (type) {
+      case 'data_fetch': return 'bg-blue-600 border-blue-400';
+      case 'analysis': return 'bg-green-600 border-green-400';
+      case 'decision': return 'bg-purple-600 border-purple-400';
+      case 'inference': return 'bg-orange-600 border-orange-400';
+      case 'validation': return 'bg-teal-600 border-teal-400';
+      case 'spawn': return 'bg-indigo-600 border-indigo-400';
+      default: return 'bg-gray-600 border-gray-400';
+    }
+  };
+
+  const getNodeIcon = (type: string) => {
+    switch (type) {
+      case 'data_fetch': return 'DATA';
+      case 'analysis': return 'ANALYZE';
+      case 'decision': return 'DECIDE';
+      case 'inference': return 'INFER';
+      case 'validation': return 'VALIDATE';
+      case 'spawn': return 'SPAWN';
+      default: return 'PROCESS';
+    }
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg p-6">
-      <h2 className="text-white text-xl font-semibold mb-4">🤖 AI Investigation Progress</h2>
+      <h2 className="text-white text-xl font-semibold mb-4">AI Investigation Progress</h2>
       
       {isLoading && (
         <div className="text-center py-8">
@@ -88,34 +115,127 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
         </div>
       )}
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
-        {nodes.map((node: AgentNode, index: number) => (
-          <div key={node.id || index} className="bg-gray-700 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-white font-medium">{node.label}</h3>
-              <span className={`px-2 py-1 rounded text-xs ${
-                node.status === 'completed' ? 'bg-green-600 text-white' : 
-                node.status === 'in_progress' ? 'bg-yellow-600 text-white' : 
-                'bg-gray-600 text-white'
-              }`}>
-                {node.status}
-              </span>
+      <div className="h-96 overflow-auto">
+        {nodes.length === 0 && !isLoading ? (
+          <div className="text-gray-400 text-center py-12">
+            No investigation data yet. Start an investigation to see AI agents in action!
+          </div>
+        ) : (
+          <div className="relative min-h-full">
+            {/* Horizontal node flow */}
+            <div className="flex items-start space-x-6 overflow-x-auto pb-4 min-w-max">
+              {nodes.map((node: AgentNode, index: number) => (
+                <div key={node.id || index} className="flex items-center">
+                  {/* Node */}
+                  <div className={`
+                    ${getNodeColor(node.type, node.status)} 
+                    rounded-lg p-4 min-w-64 max-w-80 text-white shadow-lg border-2
+                    transition-all duration-300 hover:scale-105
+                  `}>
+                    {/* Node Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-black bg-opacity-30 px-2 py-1 rounded text-xs font-bold">
+                          {getNodeIcon(node.type)}
+                        </div>
+                        <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                          {node.type.replace('_', ' ')}
+                        </span>
+                      </div>
+                      
+                      <div className={`
+                        px-2 py-1 rounded-full text-xs font-semibold
+                        ${node.status === 'completed' ? 'bg-green-500' : 
+                          node.status === 'error' ? 'bg-red-500' : 
+                          node.status === 'in_progress' ? 'bg-yellow-500' : 'bg-gray-500'}
+                      `}>
+                        {node.status.toUpperCase()}
+                      </div>
+                    </div>
+                    
+                    {/* Node Content */}
+                    <h4 className="font-semibold text-sm mb-2 leading-tight">
+                      {node.label}
+                    </h4>
+                    
+                    <p className="text-xs opacity-90 leading-relaxed mb-3">
+                      {node.description}
+                    </p>
+                    
+                    {/* Node Footer */}
+                    <div className="flex justify-between items-center text-xs opacity-75">
+                      <span>
+                        {new Date(node.created_at).toLocaleTimeString()}
+                      </span>
+                      {node.completed_at && (
+                        <span>
+                          Duration: {Math.round((new Date(node.completed_at).getTime() - new Date(node.created_at).getTime()) / 1000)}s
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Data Preview */}
+                    {node.data && Object.keys(node.data).length > 0 && (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs opacity-75 hover:opacity-100">
+                          View Data
+                        </summary>
+                        <div className="mt-2 bg-black bg-opacity-30 rounded p-2 text-xs font-mono max-h-32 overflow-auto">
+                          <pre className="whitespace-pre-wrap">
+                            {JSON.stringify(node.data, null, 2).substring(0, 300)}
+                            {JSON.stringify(node.data, null, 2).length > 300 ? '...' : ''}
+                          </pre>
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                  
+                  {/* Arrow connector */}
+                  {index < nodes.length - 1 && (
+                    <div className="flex items-center mx-3">
+                      <div className="w-12 h-0.5 bg-gray-500"></div>
+                      <div className="w-0 h-0 border-l-6 border-l-gray-500 border-y-4 border-y-transparent"></div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <p className="text-gray-300 text-sm">{node.description}</p>
-            {node.data && (
-              <div className="mt-2 text-xs text-gray-400">
-                <pre className="whitespace-pre-wrap">
-                  {JSON.stringify(node.data, null, 2).substring(0, 200)}...
-                </pre>
+            
+            {/* Progress Summary */}
+            {nodes.length > 0 && (
+              <div className="mt-6 bg-gray-700 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white font-semibold">Investigation Progress</span>
+                  <span className="text-gray-300 text-sm">
+                    {nodes.filter(n => n.status === 'completed').length} / {nodes.length} completed
+                  </span>
+                </div>
+                
+                <div className="bg-gray-600 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${nodes.length > 0 ? (nodes.filter(n => n.status === 'completed').length / nodes.length) * 100 : 0}%` 
+                    }}
+                  ></div>
+                </div>
+                
+                {/* Node Type Summary */}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {Array.from(new Set(nodes.map(n => n.type))).map(type => {
+                    const typeNodes = nodes.filter(n => n.type === type);
+                    const completed = typeNodes.filter(n => n.status === 'completed').length;
+                    return (
+                      <div key={type} className="bg-gray-600 rounded px-2 py-1 text-xs">
+                        <span className="font-semibold">{type.replace('_', ' ').toUpperCase()}: </span>
+                        <span>{completed}/{typeNodes.length}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
-        ))}
-        
-        {nodes.length === 0 && !isLoading && (
-          <p className="text-gray-400 text-center py-8">
-            No investigation data yet. Start an investigation to see AI agents in action!
-          </p>
         )}
       </div>
     </div>
@@ -173,8 +293,8 @@ export default function Home() {
       // Add validation node
       const validationNode: AgentNode = {
         id: 'validation',
-        label: '✅ Stock Validation Complete',
-        description: `${symbol} validated - Price: $${validationData.current_price?.toFixed(2)}, Change: ${validationData.change_percent}`,
+        label: 'Stock Validation Complete',
+        description: `${symbol} validated - Current Price: $${validationData.current_price?.toFixed(2)}, Change: ${validationData.change_percent}`,
         status: 'completed',
         type: 'validation',
         data: validationData,
@@ -204,8 +324,8 @@ export default function Home() {
       // Add investigation start node
       const startNode: AgentNode = {
         id: 'investigation-start',
-        label: '🚀 Investigation Started',
-        description: `AI agents beginning comprehensive analysis of ${symbol}`,
+        label: 'Agent Decision: Begin Comprehensive Analysis',
+        description: `AI agents initiated multi-dimensional investigation of ${symbol} across news sentiment, earnings data, and market context`,
         status: 'completed',
         type: 'spawn',
         data: data,
@@ -246,8 +366,8 @@ export default function Home() {
               setTimeout(() => {
                 const analysisNode: AgentNode = {
                   id: `langchain-${analysisType}`,
-                  label: `🔗 ${analysisType.replace('_', ' ').toUpperCase()} Analysis`,
-                  description: `${analysisData?.sentiment_indicators?.length || analysisData?.earnings_indicators?.length || analysisData?.sector_trends?.length || 0} insights found - Confidence: ${analysisData?.confidence_score}/10`,
+                  label: `Fetch ${analysisType.replace('_', ' ').toUpperCase()} Data`,
+                  description: `Analyzing ${symbol} through ${analysisData?.sentiment_indicators?.length || analysisData?.earnings_indicators?.length || analysisData?.sector_trends?.length || 0} data sources - Confidence Score: ${analysisData?.confidence_score}/10`,
                   status: 'completed',
                   type: 'analysis',
                   data: analysisData,
@@ -264,8 +384,8 @@ export default function Home() {
             setTimeout(() => {
               const summaryNode: AgentNode = {
                 id: 'investigation-complete',
-                label: '🎉 Investigation Complete',
-                description: `Comprehensive AI analysis of ${symbol} finished. Found ${Object.keys(langchainData.langchain_analysis).length} investigation dimensions with LangChain enhancement.`,
+                label: 'Inference Node: Cross-Reference Analysis Complete',
+                description: `AI agent synthesized ${Object.keys(langchainData.langchain_analysis).length} investigation streams into comprehensive market intelligence for ${symbol}`,
                 status: 'completed',
                 type: 'inference',
                 data: {
@@ -294,7 +414,7 @@ export default function Home() {
           // Add error node but continue
           const errorNode: AgentNode = {
             id: 'langchain-error',
-            label: '⚠️ LangChain Analysis Error',
+            label: 'Agent Decision: LangChain Analysis Failed',
             description: `LangChain analysis encountered an issue: ${langchainError}`,
             status: 'error',
             type: 'analysis',
@@ -320,7 +440,7 @@ export default function Home() {
       // Show error node
       const errorNode: AgentNode = {
         id: 'error',
-        label: '❌ Investigation Error',
+        label: 'Investigation Error: Process Failed',
         description: `Failed to investigate ${symbol}: ${error}`,
         status: 'error',
         type: 'analysis',
@@ -372,10 +492,10 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-4">
-            🚀 AEGIS Stock Investigation System
+            AEGIS Stock Investigation System
           </h1>
           <p className="text-blue-200 text-lg">
-            LangChain-Enhanced AI Stock Investigation Platform
+            Advanced AI-powered real-time stock analysis with node-based investigation tracking
           </p>
           <div className="mt-4 flex justify-center space-x-4">
             <a 
@@ -404,7 +524,7 @@ export default function Home() {
             
             {investigationData && (
               <div className="mt-6 bg-gray-800 rounded-lg p-6">
-                <h3 className="text-white font-semibold mb-3">📊 Investigation Status</h3>
+                <h3 className="text-white font-semibold mb-3">Investigation Status</h3>
                 <div className="space-y-2 text-sm">
                   <p className="text-gray-300">ID: {investigationData.investigation_id}</p>
                   <p className="text-gray-300">Status: <span className="text-green-400">{investigationData.status}</span></p>
