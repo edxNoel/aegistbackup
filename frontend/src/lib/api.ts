@@ -1,7 +1,7 @@
 // API configuration for different environments
 export const API_CONFIG = {
   baseURL: process.env.NODE_ENV === 'production' 
-    ? '' // In production, API routes will be at the same domain via reverse proxy routing
+    ? '' // In production, API routes will be at the same domain via vercel.json routing
     : 'http://localhost:8000',
   
   wsURL: process.env.NODE_ENV === 'production'
