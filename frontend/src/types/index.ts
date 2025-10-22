@@ -45,7 +45,7 @@ export interface PriceNodeData {
 
 export interface AgentNode {
   id: string;
-  type: 'data_fetch' | 'analysis' | 'decision' | 'inference' | 'validation' | 'spawn';
+  type: 'data_fetch' | 'analysis' | 'decision' | 'inference' | 'validation' | 'spawn' | 'sub_investigation' | 'sub_inference';
   label: string;
   description: string;
   status: 'pending' | 'in_progress' | 'completed' | 'error';

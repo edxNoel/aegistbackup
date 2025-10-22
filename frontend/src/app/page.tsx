@@ -88,6 +88,8 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
       case 'inference': return 'bg-orange-600 border-orange-400';
       case 'validation': return 'bg-teal-600 border-teal-400';
       case 'spawn': return 'bg-indigo-600 border-indigo-400';
+      case 'sub_investigation': return 'bg-cyan-600 border-cyan-400';
+      case 'sub_inference': return 'bg-pink-600 border-pink-400';
       default: return 'bg-gray-600 border-gray-400';
     }
   };
@@ -100,6 +102,8 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
       case 'inference': return 'INFER';
       case 'validation': return 'VALIDATE';
       case 'spawn': return 'SPAWN';
+      case 'sub_investigation': return 'SUB-INV';
+      case 'sub_inference': return 'SUB-INF';
       default: return 'PROCESS';
     }
   };
@@ -129,10 +133,11 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                   {/* Node with enhanced styling for different types */}
                   <div className={`
                     ${getNodeColor(node.type, node.status)} 
-                    rounded-lg p-4 min-w-64 max-w-80 text-white shadow-lg border-2
+                    rounded-lg p-6 min-w-96 max-w-2xl text-white shadow-lg border-2
                     transition-all duration-300 hover:scale-105
                     ${node.type === 'spawn' ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}
                     ${node.type === 'inference' ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}
+                    ${node.type === 'sub_investigation' ? 'ring-2 ring-cyan-400 ring-opacity-50' : ''}
                   `}>
                     {/* Node Header */}
                     <div className="flex items-center justify-between mb-3">
@@ -166,22 +171,22 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                     
                     {/* Enhanced data display for inference nodes with REAL Claude analysis */}
                     {node.type === 'inference' && (node.data as any)?.comprehensive_analysis && (
-                      <div className="bg-black bg-opacity-30 rounded p-3 mb-3 text-xs">
-                        <div className="font-semibold text-yellow-300 mb-2">Claude Master Inference:</div>
-                        <div className="space-y-2">
-                          <div className="bg-gray-700 rounded p-2">
-                            <div className="font-semibold text-orange-300 mb-1">Primary Cause:</div>
+                      <div className="bg-black bg-opacity-30 rounded p-4 mb-4 text-sm">
+                        <div className="font-semibold text-yellow-300 mb-3">Claude Master Inference:</div>
+                        <div className="space-y-3">
+                          <div className="bg-gray-700 rounded p-3">
+                            <div className="font-semibold text-orange-300 mb-2">Primary Cause:</div>
                             <div className="text-gray-200 leading-relaxed">{(node.data as any).primary_cause}</div>
                           </div>
-                          <div className="bg-gray-700 rounded p-2">
-                            <div className="font-semibold text-cyan-300 mb-1">Detailed Analysis:</div>
-                            <div className="text-gray-200 leading-relaxed text-xs">{(node.data as any).detailed_reasoning}</div>
+                          <div className="bg-gray-700 rounded p-3 max-h-48 overflow-y-auto">
+                            <div className="font-semibold text-cyan-300 mb-2">Detailed Analysis:</div>
+                            <div className="text-gray-200 leading-relaxed text-sm whitespace-pre-wrap">{(node.data as any).detailed_reasoning}</div>
                           </div>
-                          <div className="bg-gray-700 rounded p-2">
-                            <div className="font-semibold text-purple-300 mb-1">AI Recommendation:</div>
+                          <div className="bg-gray-700 rounded p-3">
+                            <div className="font-semibold text-purple-300 mb-2">AI Recommendation:</div>
                             <div className="text-gray-200">{(node.data as any).recommendation}</div>
                           </div>
-                          <div className="flex justify-between text-xs">
+                          <div className="flex justify-between text-sm">
                             <div>Confidence: <span className="text-blue-300 font-semibold">{(node.data as any).confidence_score}/10</span></div>
                             <div>Processing: <span className="text-green-300">{(node.data as any).claude_processing_time}s</span></div>
                           </div>
@@ -191,15 +196,30 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                     
                     {/* Display real Claude analysis for analysis nodes */}
                     {node.type === 'analysis' && (node.data as any)?.raw_analysis && (
-                      <div className="bg-black bg-opacity-30 rounded p-3 mb-3 text-xs">
-                        <div className="font-semibold text-cyan-300 mb-2">Claude AI Analysis:</div>
-                        <div className="text-gray-200 leading-relaxed max-h-32 overflow-y-auto">
-                          {(node.data as any).raw_analysis.substring(0, 200)}
-                          {(node.data as any).raw_analysis.length > 200 ? '...' : ''}
+                      <div className="bg-black bg-opacity-30 rounded p-4 mb-4 text-sm">
+                        <div className="font-semibold text-cyan-300 mb-3">Claude AI Analysis:</div>
+                        <div className="text-gray-200 leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">
+                          {(node.data as any).raw_analysis}
                         </div>
                         {(node.data as any).processing_time && (
-                          <div className="mt-2 text-xs text-green-300">
+                          <div className="mt-3 text-sm text-green-300">
                             Processing Time: {(node.data as any).processing_time}s
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Sub-investigation analysis display */}
+                    {(node.type === 'sub_investigation' || node.type === 'sub_inference') && (node.data as any)?.sub_analysis && (
+                      <div className="bg-black bg-opacity-30 rounded p-4 mb-4 text-sm">
+                        <div className="font-semibold text-cyan-300 mb-3">Sub-Investigation Analysis:</div>
+                        <div className="text-gray-200 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+                          {(node.data as any).sub_analysis}
+                        </div>
+                        {(node.data as any).trigger_reason && (
+                          <div className="mt-3 pt-3 border-t border-gray-600">
+                            <div className="font-semibold text-yellow-300 mb-1">Investigation Trigger:</div>
+                            <div className="text-gray-300 text-sm">{(node.data as any).trigger_reason}</div>
                           </div>
                         )}
                       </div>
@@ -669,6 +689,105 @@ export default function Home() {
                     : node
                 ));
                 
+                // Check if this analysis triggers a sub-investigation
+                const shouldTriggerSubInvestigation = () => {
+                  const analysis = claudeData.raw_analysis.toLowerCase();
+                  return analysis.includes('partnership') || 
+                         analysis.includes('acquisition') || 
+                         analysis.includes('beat') || 
+                         analysis.includes('exceeded') || 
+                         analysis.includes('significant') ||
+                         analysis.includes('unusual') ||
+                         analysis.includes('anomal') ||
+                         analysis.length > 800; // Trigger on detailed analysis
+                };
+                
+                // Trigger sub-investigation if warranted
+                if (shouldTriggerSubInvestigation()) {
+                  setTimeout(async () => {
+                    try {
+                      console.log(`Triggering sub-investigation for ${investigation.type}...`);
+                      
+                      // Add sub-investigation spawn node
+                      const subSpawnNode: AgentNode = {
+                        id: `sub-spawn-${investigation.type}`,
+                        label: `AI Decision: Deep Dive Required`,
+                        description: `Claude AI detected significant patterns requiring sub-investigation`,
+                        status: 'in_progress',
+                        type: 'spawn',
+                        data: { sub_investigation_trigger: true },
+                        children_ids: [],
+                        created_at: new Date().toISOString()
+                      };
+                      
+                      setNodes(prev => [...prev, subSpawnNode]);
+                      
+                      // Call sub-investigation API
+                      const subResponse = await fetch('/api/claude-sub-investigation', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          symbol,
+                          triggerFinding: claudeData.raw_analysis.substring(0, 200) + '...',
+                          investigationType: investigation.type,
+                          parentAnalysis: claudeData
+                        }),
+                      });
+                      
+                      if (subResponse.ok) {
+                        const subData = await subResponse.json();
+                        
+                        // Update spawn to completed
+                        setNodes(prev => prev.map(node => 
+                          node.id === `sub-spawn-${investigation.type}`
+                            ? { ...node, status: 'completed', completed_at: new Date().toISOString() }
+                            : node
+                        ));
+                        
+                        // Add sub-investigation analysis node
+                        const subAnalysisNode: AgentNode = {
+                          id: `sub-analysis-${investigation.type}`,
+                          label: `Sub-Investigation: ${subData.investigation_type}`,
+                          description: `Deep analysis completed with ${subData.confidence_score.toFixed(1)}/10 confidence`,
+                          status: 'completed',
+                          type: 'sub_investigation',
+                          data: {
+                            sub_analysis: subData.sub_analysis,
+                            trigger_reason: subData.trigger_reason,
+                            investigation_type: subData.investigation_type,
+                            confidence_score: subData.confidence_score,
+                            recommendations: subData.recommendations
+                          },
+                          children_ids: [],
+                          created_at: new Date().toISOString(),
+                          completed_at: new Date().toISOString()
+                        };
+                        
+                        setNodes(prev => [...prev, subAnalysisNode]);
+                        
+                        // Add the sub-investigation findings to the overall findings
+                        allInvestigationFindings.push(subData.sub_analysis);
+                        
+                      } else {
+                        // Update spawn to error
+                        setNodes(prev => prev.map(node => 
+                          node.id === `sub-spawn-${investigation.type}`
+                            ? { ...node, status: 'error', description: 'Sub-investigation failed' }
+                            : node
+                        ));
+                      }
+                      
+                    } catch (subError) {
+                      console.error('Sub-investigation error:', subError);
+                      setNodes(prev => prev.map(node => 
+                        node.id === `sub-spawn-${investigation.type}`
+                          ? { ...node, status: 'error', description: `Sub-investigation failed: ${subError}` }
+                          : node
+                      ));
+                    }
+                  }, 1000); // Start sub-investigation 1 second after main analysis
+                }
+                
               } catch (error) {
                 console.error(`Claude ${investigation.type} analysis error:`, error);
                 
@@ -683,7 +802,7 @@ export default function Home() {
             }, 1000 + (i * 500)); // Stagger API calls
           }
           
-          // REAL Claude Master Inference after all investigations complete
+          // REAL Claude Master Inference after all investigations complete (including sub-investigations)
           setTimeout(async () => {
             try {
               console.log('Starting Claude master inference with all findings...');
@@ -766,7 +885,7 @@ export default function Home() {
               
               setIsLoading(false);
             }
-          }, 15000); // Wait for all investigations to complete (3 types * 3 seconds + buffer)
+          }, 25000); // Wait longer for all investigations and sub-investigations to complete
           
         } catch (investigationError) {
           console.error('Real Claude investigation error:', investigationError);
