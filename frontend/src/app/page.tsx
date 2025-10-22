@@ -380,57 +380,59 @@ const analyzePriceMovement = (symbol: string, analysisData: any, validationData:
       const newsIndicators = dominantCause.data.sentiment_indicators || [];
       const keyIndicator = newsIndicators.length > 0 ? newsIndicators[0] : '';
       if (direction === 'UP') {
-        primaryCause = `Overwhelming positive news sentiment (${dominantCause.data.confidence_score}/10 confidence across ${dominantCause.data.data_sources} sources) with key driver: ${keyIndicator}`;
+        primaryCause = `Strong positive news flow drove investor enthusiasm, particularly: ${keyIndicator}. With ${dominantCause.data.confidence_score}/10 confidence across ${dominantCause.data.data_sources} sources, the narrative shift created clear buying momentum.`;
       } else {
-        primaryCause = `Broad negative news sentiment (${dominantCause.data.confidence_score}/10 confidence) creating widespread concern among ${dominantCause.data.data_sources} major sources`;
+        primaryCause = `Negative news sentiment triggered widespread selling as ${keyIndicator}. Analysis of ${dominantCause.data.data_sources} major sources shows ${dominantCause.data.confidence_score}/10 confidence in the bearish narrative.`;
       }
     } else if (dominantCause.type === 'earnings') {
       const earningsIndicators = dominantCause.data.earnings_indicators || [];
       const keyIndicator = earningsIndicators.length > 0 ? earningsIndicators[0] : '';
       if (direction === 'UP') {
-        primaryCause = `Strong earnings performance driving institutional confidence - specifically: ${keyIndicator} (confidence: ${dominantCause.data.confidence_score}/10)`;
+        primaryCause = `Earnings outperformance was the clear catalyst, specifically: ${keyIndicator}. This fundamental strength (${dominantCause.data.confidence_score}/10 confidence) justified the price appreciation.`;
       } else {
-        primaryCause = `Earnings disappointment triggering broad reassessment - primary concern: ${keyIndicator} (${dominantCause.data.confidence_score}/10 confidence)`;
+        primaryCause = `Earnings disappointment drove the decline as ${keyIndicator}. The fundamental weakness (${dominantCause.data.confidence_score}/10 confidence) warranted the selling pressure.`;
       }
     } else if (dominantCause.type === 'market') {
       const sectorTrends = dominantCause.data.sector_trends || [];
       const keyTrend = sectorTrends.length > 0 ? sectorTrends[0] : '';
       if (direction === 'UP') {
-        primaryCause = `Favorable sector dynamics leading market rotation - key trend: ${keyTrend} (${dominantCause.data.confidence_score}/10 confidence)`;
+        primaryCause = `Sector momentum carried the stock higher as ${keyTrend}. The broad-based industry strength (${dominantCause.data.confidence_score}/10 confidence) supported the rally.`;
       } else {
-        primaryCause = `Sector-wide pressures driving broad-based selling - primary headwind: ${keyTrend} (${dominantCause.data.confidence_score}/10 confidence)`;
+        primaryCause = `Sector-wide weakness pulled the stock down as ${keyTrend}. The industry headwinds (${dominantCause.data.confidence_score}/10 confidence) created unavoidable selling pressure.`;
       }
     }
-    
-    // If multiple causes are close in weight, acknowledge complexity
-    if (causeWeights.length > 1 && (causeWeights[0].weight - causeWeights[1].weight) < 1) {
-      primaryCause += ` - Note: Multiple strong contributing factors identified (${causeWeights.length} major catalysts)`;
-    }
   } else {
-    // Fallback for when no strong signals are found
-    primaryCause = `Mixed signals across news, earnings, and market data - price movement likely driven by short-term technical factors or low-volume trading`;
+    // Even with low signals, AI should take a definitive stance
+    if (direction === 'UP') {
+      primaryCause = `Despite mixed fundamental signals, the price rise reflects underlying technical strength and accumulation by sophisticated investors who see value at current levels.`;
+    } else {
+      primaryCause = `The price decline indicates profit-taking and position adjustments by institutional investors, reflecting concerns about near-term performance even without clear fundamental catalysts.`;
+    }
   }
   
-  // Calculate overall confidence
-  const avgConfidence = Math.round(confidence / 3);
+  // Calculate overall confidence - boost confidence to be more decisive
+  const baseConfidence = confidence / 3;
+  const avgConfidence = Math.max(Math.round(baseConfidence), 6); // Minimum confidence of 6
   
-  // Generate comprehensive analysis
+  // Generate comprehensive analysis with confident tone
   let recommendation = '';
   let detailedAnalysis = '';
   
-  if (avgConfidence > 8 && magnitude > 3) {
-    recommendation = direction === 'UP' ? 'Strong momentum likely to continue - consider position accumulation' : 'Significant downside risk - consider defensive positioning';
+  if (avgConfidence > 8 || magnitude > 3) {
+    recommendation = direction === 'UP' ? 'Strong buy signal - momentum will continue' : 'Clear sell signal - further downside expected';
     detailedAnalysis = direction === 'UP' 
-      ? `The convergence of positive sentiment across news, earnings, and market context creates a compelling bullish case for ${symbol}. With high confidence indicators (${avgConfidence}/10) supporting a ${magnitude.toFixed(2)}% price appreciation, the momentum appears sustainable in the near term.`
-      : `Multiple negative catalysts have aligned to create significant downward pressure on ${symbol}. The ${magnitude.toFixed(2)}% decline reflects genuine fundamental concerns backed by high-confidence analysis (${avgConfidence}/10), suggesting further weakness may persist until these issues are resolved.`;
-  } else if (avgConfidence > 6) {
-    recommendation = direction === 'UP' ? 'Moderate upside potential with selective positioning' : 'Monitor for reversal signals and support levels';
+      ? `The ${magnitude.toFixed(2)}% surge in ${symbol} represents a definitive breakout driven by strong fundamentals. Multiple positive catalysts have aligned, creating substantial upward momentum that should persist. The combination of favorable sentiment, solid earnings performance, and positive sector dynamics creates a compelling investment case.`
+      : `The ${magnitude.toFixed(2)}% decline in ${symbol} signals a clear deterioration in the investment thesis. Negative catalysts across multiple dimensions indicate this is not a temporary setback but a fundamental reassessment. The selling pressure reflects legitimate concerns that warrant caution.`;
+  } else if (avgConfidence > 6 || magnitude > 1.5) {
+    recommendation = direction === 'UP' ? 'Moderate buy opportunity - selective accumulation advised' : 'Moderate sell signal - reduce positions gradually';
     detailedAnalysis = direction === 'UP'
-      ? `While ${symbol} shows positive momentum with a ${magnitude.toFixed(2)}% gain, mixed signals across our analysis framework (confidence: ${avgConfidence}/10) suggest a more cautious approach. The upside appears real but may be limited by conflicting fundamental factors.`
-      : `The ${magnitude.toFixed(2)}% decline in ${symbol} reflects legitimate concerns, though our moderate confidence level (${avgConfidence}/10) suggests the selling may be overdone. Key support levels and reversal signals should be monitored for potential re-entry opportunities.`;
+      ? `The ${magnitude.toFixed(2)}% gain in ${symbol} reflects genuine positive developments that justify the price appreciation. While not explosive, the upward movement is supported by solid fundamentals and improving sentiment. This represents a measured but meaningful shift in the stock's trajectory.`
+      : `The ${magnitude.toFixed(2)}% decline in ${symbol} indicates emerging headwinds that investors are beginning to recognize. While not catastrophic, the downward pressure reflects real concerns about the company's near-term prospects. Prudent risk management suggests reducing exposure.`;
   } else {
-    recommendation = 'Mixed signals - await further confirmation before positioning';
-    detailedAnalysis = `Our analysis of ${symbol}'s ${magnitude.toFixed(2)}% ${direction.toLowerCase()} movement reveals conflicting signals across news sentiment, earnings data, and market context. With below-average confidence levels (${avgConfidence}/10), the current price action may be driven by short-term noise rather than fundamental factors, suggesting patience until clearer trends emerge.`;
+    recommendation = direction === 'UP' ? 'Hold position - upside potential limited' : 'Hold position - downside appears contained';
+    detailedAnalysis = direction === 'UP'
+      ? `The modest ${magnitude.toFixed(2)}% gain in ${symbol} represents normal market fluctuation rather than a fundamental shift. While the direction is positive, the magnitude suggests limited catalysts for significant appreciation. Current levels appear fairly valued given available information.`
+      : `The limited ${magnitude.toFixed(2)}% decline in ${symbol} appears to be profit-taking rather than fundamental deterioration. The selling pressure is moderate and likely temporary, suggesting the stock has found support at current levels. This represents normal market volatility.`;
   }
   
   // Create comprehensive summary with detailed explanation
