@@ -119,25 +119,27 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
         </div>
       )}
 
-      <div className="h-96 overflow-auto">
+      <div className="min-h-96 max-h-screen overflow-x-auto overflow-y-visible">
         {nodes.length === 0 && !isLoading ? (
           <div className="text-gray-400 text-center py-12">
             No investigation data yet. Start an investigation to see AI agents in action!
           </div>
         ) : (
-          <div className="relative min-h-full">
+          <div className="relative w-full">
             {/* Horizontal node flow with enhanced sub-node visualization */}
-            <div className="flex items-start space-x-6 overflow-x-auto pb-4 min-w-max">
+            <div className="flex items-start space-x-6 overflow-x-auto overflow-y-visible pb-8 min-w-max pr-4">
               {nodes.map((node: AgentNode, index: number) => (
-                <div key={node.id || index} className="flex items-center">
+                <div key={node.id || index} className="flex items-start flex-shrink-0">
                   {/* Node with enhanced styling for different types */}
                   <div className={`
                     ${getNodeColor(node.type, node.status)} 
-                    rounded-lg p-6 min-w-96 max-w-2xl text-white shadow-lg border-2
+                    rounded-lg p-6 w-96 max-w-2xl text-white shadow-lg border-2
                     transition-all duration-300 hover:scale-105
                     ${node.type === 'spawn' ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}
                     ${node.type === 'inference' ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}
                     ${node.type === 'sub_investigation' ? 'ring-2 ring-cyan-400 ring-opacity-50' : ''}
+                    ${node.type === 'sub_inference' ? 'ring-2 ring-pink-400 ring-opacity-50' : ''}
+                    flex flex-col
                   `}>
                     {/* Node Header */}
                     <div className="flex items-center justify-between mb-3">
@@ -213,13 +215,26 @@ const NodeVisualization = ({ nodes, isLoading }: any) => {
                     {(node.type === 'sub_investigation' || node.type === 'sub_inference') && (node.data as any)?.sub_analysis && (
                       <div className="bg-black bg-opacity-30 rounded p-4 mb-4 text-sm">
                         <div className="font-semibold text-cyan-300 mb-3">Sub-Investigation Analysis:</div>
-                        <div className="text-gray-200 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+                        <div className="text-gray-200 leading-relaxed max-h-96 overflow-y-auto whitespace-pre-wrap">
                           {(node.data as any).sub_analysis}
                         </div>
                         {(node.data as any).trigger_reason && (
-                          <div className="mt-3 pt-3 border-t border-gray-600">
-                            <div className="font-semibold text-yellow-300 mb-1">Investigation Trigger:</div>
-                            <div className="text-gray-300 text-sm">{(node.data as any).trigger_reason}</div>
+                          <div className="mt-4 pt-3 border-t border-gray-600">
+                            <div className="font-semibold text-yellow-300 mb-2">Investigation Trigger:</div>
+                            <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{(node.data as any).trigger_reason}</div>
+                          </div>
+                        )}
+                        {(node.data as any).recommendations && (
+                          <div className="mt-4 pt-3 border-t border-gray-600">
+                            <div className="font-semibold text-green-300 mb-2">Recommendations:</div>
+                            <ul className="text-gray-300 text-sm space-y-1">
+                              {(node.data as any).recommendations.map((rec: string, idx: number) => (
+                                <li key={idx} className="flex items-start">
+                                  <span className="text-green-400 mr-2">•</span>
+                                  <span>{rec}</span>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                       </div>
